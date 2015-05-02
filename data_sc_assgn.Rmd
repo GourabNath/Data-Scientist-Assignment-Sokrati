@@ -1,0 +1,491 @@
+---
+title: "Data Scientist Assignment"
+output: html_document
+---
+
+##**1.  Introduction**
+
+The data file data_scientist_assignment contains measurement of some unspecified metric by date and hour of the day. The data indicates that the variable is measured sequentially in time at a fixed interval of time, so that the resulting data may be considered to be a time series.
+
+
+##**2.  Exploring The Data**
+
+###**2.1.  Reading the data in R**
+
+The data has been provided in the .tsv format. The file is read using MS Excel and is saved in .csv format. The CSV file is then read in R environment
+
+```{r}
+data <- read.csv("C:/Users/Messi/Desktop/Data_scientist_assignment.csv", header=T)
+
+head(data)  	#Gives the first 6 obs. of the data
+tail(data)		#Gives the last 6 obs. of the data
+
+```
+
+###**2.2.  Converting the data into data.frame**
+
+The data is being converted into a data frame such that each rows of the data frame represents the unique dates and the columns represents the hours of a day, which gives a better visual representation of the entire data.
+
+```{r}
+data.df <- as.data.frame(matrix(data$vals, 136, 24))
+rownames(data.df) <- seq(as.Date("2014/5/1"), as.Date("2014/9/13"), "day")
+colnames(data.df) <- seq(00,23)
+
+data.df[1:10,]  #Checking out the first 10 obs.
+
+```
+
+
+###**2.3.  Converting the data as class "ts"**
+
+In order to use various Time Series packages this data.df needs to be expressed as "ts" class. So, now we will convert the data.frame into ts class.
+
+```{r}
+data.ts <- ts(as.vector(as.matrix(data.df)), start=c(as.numeric(as.Date("2014/5/1")),1), 
+  		end=c(as.numeric(as.Date("2014/9/13")),24), frequency=24) 
+
+class(data.ts)
+
+#The start and end of the ts() fnuction represents the starting time point and the ending
+#time point of the time series data. An imortant thing over here is that the argument start
+#and end can only take numerical values. That is why the dates has been converted into 
+#numeric values using the as.numeric() function. In R the dates are stored as an integer
+#such that the integer 0 indicates the date 1970-01-01
+
+
+```
+
+
+###**2.4.  Summarizing the data**
+
+```{r}
+summary(data.ts)
+```
+
+
+###**2.5.  Plotting the data**
+```{r, out.width = '10000px', out.height = '800px'}
+#At the time of plotting it should be kept in mind that the time in data.ts is expressed 
+#as integers so when we plot the data the x-axis will display the integers (eg. the date
+#2014/5/1 will de displayed as an integer as 16191, which will be a little difficult to
+#interpret. Thus we would like to modify x-axis such a way so that it displays dates instead
+#of integers.
+
+plot(data.ts,axes=F,main="The Time Series Data")  	
+				                        #Plots data.ts without any axis 
+
+box()				                    #Creats a box around the plot
+
+library(zoo)		          #Used over here to convert the numeric figures back into dates
+
+axis(1, seq(16200,16320,20), labels=as.Date(seq(16200,16320,20)))
+                               #labelling x-axis,i.e. axis(1)
+
+axis(2)				                 #keeping the y-axis, i.e. axis(2) as it is
+
+```
+
+The plot suggests that there is some kind of periodic fluctuations throughout the series. However the amplitude of the fluctuation showed some sharp significant increase towards the end of the series. An unusual spike is also observed at the middle of the data between the dates 2014-06-19 and 2014-07-09.
+
+
+```{r, out.width = '10000px', out.height = '800px'}
+#Plotting the data with a regression line fitted to it
+
+plot(data.ts,axes=F)
+box()
+axis(1, seq(16200,16320,20), labels=as.Date(seq(16200,16320,20)))
+axis(2)
+abline(reg=lm(data.ts~time(data.ts)),col="blue")   #Fitting a regression line to the data
+                                                         
+```
+
+The regression line indicates that the data has a rising trend.
+
+
+###**2.6. Time series decomposition**
+
+Now we decompose the time series into its various features, viz. trend, seasonal components (also called the deterministic part) and the random component (stochastic).
+Here we decompose the time series into trend, seasonal and random components and plot them in a graph.
+
+```{r, out.width = '10000px', out.height = '800px'}
+#In order to decompose the time series data in to Trend, Seasonal components and Random
+#errors we use the function decompose(). To use decompose() function the data should be
+#a "ts" class.
+
+d <- decompose(data.ts)
+plot(d)
+
+```
+
+
+**Trend -** The trend shows a smoothout version of the data. From the plot we can see that the trend of the data has an increasing nature but rises very slowly until towards the end of the series it shows some sharp significant increase.
+
+**Seasonal -** We can see preety ups and downs of seasonal pattern throughout the data.
+
+**Random -** Unexplained part of the data either by trend or seasonal component.
+
+
+
+##**3.  Model Building**
+
+###**3.1  Holt-Winter's Model**
+
+Holt-Winter's model has been very appropriate for many time series with trend and seasonal factors.  
+
+####**3.1.1.  Fitting Holt-Winter's Model to the Series and plotting the fitted data:**
+
+```{r, out.width = '10000px', out.height = '800px'}
+
+data.ts.hw <- HoltWinters(data.ts)
+plot(data.ts.hw,axes=F, main="Fitted Holt-Winter's Model")
+box()
+axis(1, seq(16200,16320,20), labels=as.Date(seq(16200,16320,20)))
+axis(2)
+```
+
+
+####**3.1.2.  Making n-step ahead prediction using the fitted Holt Winters Model:**
+```{r}
+
+#n.ahead=20*24 implies making 480 hours ahead of prediction (ie, 20 days & 24 hours)  
+#The code below predicts all the values from 1st hour ahead till the 20*24 hours ahead
+
+data.predict <- predict(data.ts.hw, n.ahead = 20*24)
+
+```
+
+
+####**3.1.3.  Plotting the predictive values along with the series:**
+
+```{r, out.width = '10000px', out.height = '800px'}
+#The dotted line represents the forecasting values.
+
+ts.plot(data.ts, data.predict, lty=1:2, main = "Forecasting using Holt-Winter's Model")
+
+```
+
+```{r}
+
+#some predictions
+
+data.predict[1*1]
+data.predict[1*3]
+data.predict[2*5]
+data.predict[5*7]
+data.predict[8*15]
+data.predict[1*12]
+data.predict[10*12]
+data.predict[10*24]
+data.predict[15*20]
+data.predict[15*24]
+data.predict[16*24]
+```
+
+
+We can clearly see that the Holt Winters model is not giving a good prediction. The forecasted values show a downward trent, where the actual data do not suggest any such trend. The values predicted by this model seems to be unreliable. Also, some of the values predicted are negative but the entire series do not contain any negative observations.
+
+This might be due to the presence of such sharp fluctuations of increasing amplitude present at the end of the series. Now let us make some transfomation and check if we can avoid such irregular fluctuations from our data.
+
+
+####**3.1.4.  Taking Log Transformation of the data:**
+
+```{r, out.width = '10000px', out.height = '800px'}
+data.ts.log <- log(data.ts)
+plot(data.ts.log, main="Plotting the log transformed data")
+
+```
+
+
+Taking the log transformation of the series has decreased fluctuations of high amplitude towards the end of the data.
+
+
+####**3.1.5.  Fitting Holt-Winters to the Transfomed data:**
+
+```{r, out.width = '10000px', out.height = '800px'}
+
+data.ts.log.hw <- HoltWinters(data.ts.log)
+plot(data.ts.log.hw)
+data.predict2 <- predict(data.ts.log.hw, n.ahead = 20*24)
+ts.plot(data.ts.log, data.predict2, lty=1:2)
+```
+
+
+```{r}
+#Some Predictions
+#We will get the extimates in the form of logarithms. To get the original data we need to take exponent of the estimates.
+
+exp(data.predict2[1*1])
+exp(data.predict2[1*3])
+exp(data.predict2[2*5])
+exp(data.predict2[5*7])
+exp(data.predict2[8*15])
+exp(data.predict2[1*12])
+exp(data.predict2[10*12])
+exp(data.predict2[10*24])
+exp(data.predict2[15*20])
+exp(data.predict2[15*24])
+exp(data.predict2[16*24])
+```
+
+The predictions obtained from this fit seems to be still more reliable compared to the previous fit. However the forecasted values still shows some kind of downward trend and therefore leaves us to worry about a little.
+
+The data probably suggest us to fit some stochastic models to it.
+
+
+##**4.  Stochastic Models**
+
+###**4.1.  Checking for Stationarity**
+
+In order to have an idea of the stationarity of the time series we plot the auto correlation function (acf) and partial auto correlation function (pacf) of the series.
+
+
+```{r}
+par(mfrow=c(2,1))    #To plot multiple figure on the same page row wise.
+acf(data.ts)         #Plots the acf of the time series
+pacf(data.ts)        #Plots the pacf of the time series
+```
+
+The acf suggests that the data are corelated with time. We can see spikes at regular intervals which occurs due to seasonality. It damps of very slowly in a sinosoidal fashion which indicated that the series in not stationary in time. Hence we need to do some differencing to make the series stationary. 
+
+
+###**4.2  Transformation of data - Differencing**
+```{r}
+#From the library forecast using the ndiffs() function we can find how many differences
+#are needed to make the model stationary.
+
+library(forecast)
+
+ndiffs(data.ts)
+
+```
+
+
+ndiffs() suggests that one difference is needed to make the model stationary. We take the difference as follows:
+
+
+```{r}
+#function diff() is used to take difference
+data.diff <- diff(data.ts)
+```
+
+
+###**4.3.  Plotting the transformed data**
+
+```{r, out.width = '10000px', out.height = '800px'}
+plot(data.diff, axes=F)
+box()  
+axis(1, seq(16200,16320,20), labels=as.Date(seq(16200,16320,20))) 
+axis(2)				
+
+#acf and pacf of the transformed data:
+
+par(mfrow=c(2,1))
+acf(data.diff)
+pacf(data.diff)
+```
+
+The acf and pacf, in this case really do not give a clear answer for what model would fit. However pacf shows a sharp cut after lag 1. So we may try out with ARIMA(1,1,0) model to begin with.
+
+
+###**4.4.  Fitting ARIMA(1,1,0) Model**
+
+```{r, out.width = '10000px', out.height = '800px'}
+data.fit1 <- arima(data.ts, order = c(1,1,0), seasonal=list(order=c(1,1,0),period=24,
+            include.mean=FALSE))
+
+data.fit1
+
+data.pred1 <- predict(data.fit1, n.ahead=100)   #making 100 hrs ahead prediction
+
+#plotting the time series along with the predicted values
+#The predicted values are shown by the blue lines.
+plot(data.ts, axes=F, main = "Prediction using ARIMA(1,1,0) Model")                              
+lines(data.pred1$pred,col="blue")
+box()
+axis(1, seq(16200,16320,20), labels=as.Date(seq(16200,16320,20)))
+axis(2)
+ 
+```
+
+We can see that the model gives a good fit to the data and the predictions as indicated by the blue line seems to be reliable.
+
+Now it is important to note that altough the model seems to give good predictions it is not the only good model. In fact the acf and pacf did not give a good idea of which model to fit. So it would be suggestive to run different ARIMA models by hit and trial and find out for the best model among them.
+
+
+##**5.  Model Selection**
+
+The best among all possible models is indicated by the value of AIC (Akaike Information Criterion). AIC offers the relative estimate of the information lost when a given model is used to represent the process that generates the data. In doing so, it deals with the trade-off between the goodness of fit of the model and the complexity of the model.
+
+The smaller the value of the AIC the better is the fit of the model.
+
+So now let us try different ARIMA Models with difference 1 and find out that model having the lowest AIC.
+
+
+```{r, out.width = '10000px', out.height = '800px'}
+#Finding the AIC of different ARIMA models:
+
+#ARIMA(1,1,0)
+AIC(data.fit1)
+
+#ARIMA(2,1,0)
+AIC(arima(data.ts, order = c(2,1,0), seasonal=list(order=c(2,1,0),period=24,include.mean=FALSE)))
+
+#ARIMA(0,1,1)
+AIC(arima(data.ts, order = c(0,1,1), seasonal=list(order=c(0,1,1),period=24,include.mean=FALSE)))
+
+#ARIMA(0,1,2)
+AIC(arima(data.ts, order = c(0,1,2), seasonal=list(order=c(0,1,2),period=24,include.mean=FALSE)))
+
+#ARIMA(1,1,1)
+AIC(arima(data.ts, order = c(1,1,1), seasonal=list(order=c(1,1,1),period=24,include.mean=FALSE)))
+
+#ARIMA(2,1,1)
+AIC(arima(data.ts, order = c(2,1,1), seasonal=list(order=c(2,1,1),period=24,include.mean=FALSE)))
+
+#ARIMA(2,1,2)
+AIC(arima(data.ts, order = c(2,1,2), seasonal=list(order=c(2,1,2),period=24,include.mean=FALSE)))
+
+
+```
+
+Comparing the AIC of various ARIMA models that we have used so far the best ARIMA model turned out to be the ARIMA(2,1,2) model.
+
+Thus, it is a good idea to select the ARIMA(2,1,2) model. 
+
+
+#####**Remark:**
+
+Instead of calculating AIC's manually we could have created a comparison matrix the rows of which represents the order of AR process and the columns represents the order of the MA process and each of the cell values contains the respective AIC values accordingly. This would have been more precise a step.
+
+```{r}
+AIC_ARIMA <- matrix(NA,3,3)      #defining the matrix
+rownames(AIC_ARIMA) = c("AR(0)", "AR(1)", "AR(2)")   #Defining Row names
+colnames(AIC_ARIMA) = c("MA(0)", "MA(1)", "MA(2)")   #Defining Column names 
+AIC_ARIMA
+
+```
+
+Then filling up the matrix.
+
+######for(i in 0:2)
+######{
+######  for(j in 0:2)
+######  {
+    
+######    AIC_ARIMA[i+1,j+1] <- AIC(arima(data.ts, order = c(i,1,j), seasonal=list(orde=c(i,1 ,j),period=24, include.mean=FALSE)))
+###### }
+  
+}
+
+
+However my system was running very slow due to this looping and eventually turned out not giveng any output.
+
+
+
+```{r}
+#Fitting the ARIMA(2,1,2) model
+
+data.fit <- arima(data.ts, order = c(2,1,2), seasonal=list(order=c(2,1,2),period=24 ,include.mean=FALSE))
+
+data.pred <- predict(data.fit, n.ahead=100)   #making 100 hrs ahead prediction
+
+#plotting the time series along with the predicted values
+#The predicted values are shown by the blue lines.
+plot(data.ts, axes=F, main = "Predicting using ARIMA(2,1,2) Model")                              
+lines(data.pred$pred,col="blue")
+box()
+axis(1, seq(16200,16320,20), labels=as.Date(seq(16200,16320,20)))
+axis(2)
+
+```
+
+
+##**6.  Building Confidence Intervals**
+
+It should be noted that all the exect values that have been predicted and ploted on the graph indicated by the blue line is not really very useful. Because we might not obtain these exact values in the future. In fact there is a high chance that we will not obtain these exact figures in the future. Whatever we will obtain will be around these values. So what we should do is to base our interest more on the confidence intervals with certain probability. Let us now plot the 95% C.I. around the point estimates.
+
+
+```{r, out.width = '10000px', out.height = '800px'}
+#plotting the predicted data along with the confidence intervals:
+
+plot(data.ts, axes=F, main = "Prediction using ARIMA(2,1,2) Model")                              
+lines(data.pred$pred,col="blue")
+box()
+axis(1, seq(16200,16320,20), labels=as.Date(seq(16200,16320,20)))
+axis(2)
+
+#plotting the 95% C.I.
+lines(data.pred$pred + 1.96*data.pred$se,col="red")   #UCI is represented by the red line
+lines(data.pred$pred - 1.96*data.pred$se,col="green") #LCI is represented by the green line
+
+```
+
+##**7.  Making predictions - Forecasting**
+
+Now that we have selected and fitted our model next wel will use some sample inputs to predict the future values
+
+
+```{r}
+library(forecast)
+
+#Forecast 5 hours ahead:
+
+forecast(data.fit1,5) 
+```
+
+which gives us the predictions from 1 hour ahead to 5 hours ahead along with the confidence intervals. 
+
+Now we will go ahead and prepare a predictive function which will take Date and Time as inputs and display the predictive value and the 95% C.I. corresponding that date and timeand finally let us do do test examples where we predict the metric value using a sample input.
+
+```{r}
+
+#Building predictive function given date and time:
+
+pred <- function(date, time=0:23)
+     {
+		
+		d <- seq(as.Date("2014/9/14"),as.Date("2014/12/31"),"day")
+		t <- seq(0,23,1)
+
+
+		n.days.ahead <- which(as.Date(date)==d)
+
+		hour <- which(as.numeric(time) == t)
+
+
+	      x <- data.frame(forecast(data.fit, n.days.ahead*hour))
+	   
+	      val <- x[n.days.ahead*hour,1]
+        lci <- x[n.days.ahead*hour,4]
+        uci <- x[n.days.ahead*hour,5]
+    
+        out <- list(pred.val=c(val),CI=c(lci,uci))
+
+        return(out)
+}
+
+
+```
+
+```{r}
+#Test examples
+
+pred(date="2014-09-15",time=9)
+pred(date="2014-09-28",time=20)
+pred(date="2014-09-14",time=23)
+pred(date="2014-09-20",time=2)
+pred(date="2014-09-23",time=10)
+pred(date="2014-10-03",time=15)
+pred(date="2014-10-26",time=8)
+pred(date="2014-10-03",time=0)
+pred(date="2014-11-12",time=5)
+pred(date="2014-11-25",time=12)
+pred(date="2014-12-31",time=23)
+
+```
+
+#####-
+#####**Assignment done by:**
+#####**Gourab NAth**
+#####gourabnath88@gmail.com
+#####-
