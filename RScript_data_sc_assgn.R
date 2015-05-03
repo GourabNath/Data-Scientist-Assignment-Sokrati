@@ -327,21 +327,23 @@ forecast(data.fit1,5)
 
 #Building predictive function given date and time:
 #=================================================
-
+#the following function will take inputs as date and time and display the foreasted value and the 95% C.I. for that particular
+#date and time.
 
 pred <- function(date, time=0:23)
 {
   
-  d <- seq(as.Date("2014/9/14"),as.Date("2014/12/31"),"day")
-  t <- seq(0,23,1)
+  d <- seq(as.Date("2014/9/14"),as.Date("2014/12/31"),"day")      #sequence of dates ahead of 2014-09-13 till 2014-12-31
+  t <- seq(0,23,1)						  #hours of day from 0 hours to 23 hours
   
   
-  n.days.ahead <- which(as.Date(date)==d)
+  n.days.ahead <- which(as.Date(date)==d)			  #No. of days ahead
   
-  hour <- which(as.numeric(time) == t)
+  hour <- which(as.numeric(time) == t)				  #which() function is used to locate the position of a value
+  								  #in a vector.
   
   
-  x <- data.frame(forecast(data.fit, n.days.ahead*hour))
+  x <- data.frame(forecast(data.fit, n.days.ahead*hour))          #n.days.ahead*hour = total no. of hours ahead
   
   val <- x[n.days.ahead*hour,1]
   lci <- x[n.days.ahead*hour,4]
