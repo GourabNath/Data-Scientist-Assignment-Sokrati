@@ -65,14 +65,13 @@ summary(data.ts)
 #of integers.
 
 plot(data.ts,axes=F,main="Plotting the Time Series Data")		
-				                                                	#Plots data.ts without any axis 
+				                                              #Plots data.ts without any axis 
 
 box()				                      	                      #Creats a box around the plot
 
-library(zoo)		              	#Used over here to convert the numeric figures back into
-					                                                                         #dates
+library(zoo)		              	#Used over here to convert the numeric figures back into dates
 
-axis(1, seq(16200,16320,20), labels=as.Date(seq(16200,16320,20))) #labelling x-axis, 
+axis(1, seq(16200,16320,20), labels=as.Date(seq(16200,16320,20)))              #labelling x-axis, 
 											                                            #i.e. axis(1)
 
 axis(2)				                  #keeping the y-axis, i.e. axis(2) as it is
@@ -84,8 +83,7 @@ plot(data.ts,axes=F)
 box()
 axis(1, seq(16200,16320,20), labels=as.Date(seq(16200,16320,20)))
 axis(2)
-abline(reg=lm(data.ts~time(data.ts)),col="blue")           #Fitting a regression line to
-                                                           #the data
+abline(reg=lm(data.ts~time(data.ts)),col="blue")           #Fitting a regression line to the data
 
 
 
@@ -156,7 +154,7 @@ data.predict[16*24]
 data.ts.log <- log(data.ts)
 plot(data.ts.log)
 
-#Fitting Holt-Winters to the Transfomed data
+#Fitting Holt-Winters to the Transformed data
 
 data.ts.log.hw <- HoltWinters(data.ts.log)
 plot(data.ts.log.hw)
@@ -178,7 +176,6 @@ exp(data.predict2[15*24])
 exp(data.predict2[16*24])
 
 #This forecasting seems to be more reliable compared to the previous ones.
-#(**problem with real data**)
 
 
 #=======================================================================================
